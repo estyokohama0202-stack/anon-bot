@@ -79,11 +79,11 @@ class AnonModal(discord.ui.Modal, title="匿名投稿"):
         channel = bot.get_channel(POST_CHANNEL_ID)
         log_channel = bot.get_channel(LOG_CHANNEL_ID)
 
-        content = self.message.value if self.message.value else "（画像のみ投稿）"
+        text = self.message.value if self.message.value else "（画像のみ投稿）"
 
         embed = discord.Embed(
             title=f"匿名 #{anon_count}",
-            description=content,
+            description=text,
             color=0x2F3136
         )
 
@@ -93,13 +93,10 @@ class AnonModal(discord.ui.Modal, title="匿名投稿"):
 
         if log_channel:
             await log_channel.send(
-                f"匿名 #{anon_count}\n投稿者: {interaction.user}\n内容: {content}"
+                f"匿名 #{anon_count}\n投稿者: {interaction.user}\n内容: {text}"
             )
 
-        await interaction.response.send_message(
-            "投稿しました",
-            ephemeral=True
-        )
+        await interaction.response.send_message("投稿しました", ephemeral=True)
 
 class AnonView(discord.ui.View):
     def __init__(self):
@@ -133,10 +130,10 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    # 画像匿名投稿
+    # 匿名画像投稿
     if message.channel.id == BUTTON_CHANNEL_ID:
 
-        if message.attachments:
+        if message.attachments or message.content:
 
             await message.delete()
 
@@ -151,11 +148,13 @@ async def on_message(message):
                 file = await attachment.to_file()
                 files.append(file)
 
+            text = message.content if message.content else "（画像投稿）"
+
             channel = bot.get_channel(POST_CHANNEL_ID)
 
             embed = discord.Embed(
                 title=f"匿名 #{anon_count}",
-                description="（画像投稿）",
+                description=text,
                 color=0x2F3136
             )
 
@@ -167,7 +166,7 @@ async def on_message(message):
 
             if log_channel:
                 await log_channel.send(
-                    f"匿名画像 #{anon_count}\n投稿者: {message.author}"
+                    f"匿名投稿 #{anon_count}\n投稿者: {message.author}\n内容: {text}"
                 )
 
             return
