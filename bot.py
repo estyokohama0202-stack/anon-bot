@@ -140,38 +140,35 @@ async def on_message(message):
 
     if message.channel.id == POST_CHANNEL_ID:
 
-        if message.author.bot:
-            return
+    content = message.content
+    attachments = message.attachments
 
-        content = message.content
-        attachments = message.attachments
+    await message.delete()
 
-        await message.delete()
+    reply_data["reply"] += 1
+    save_reply(reply_data)
 
-        reply_data["reply"] += 1
-        save_reply(reply_data)
+    reply_number = reply_data["reply"]
 
-        reply_number = reply_data["reply"]
+    anchor = ""
+    match = re.search(r">>\d+", content)
 
-        anchor = ""
-        match = re.search(r">>\d+", content)
+    if match:
+        anchor = match.group()
 
-        if match:
-            anchor = match.group()
+    files = []
 
-        files = []
+    for attachment in attachments:
+        file = await attachment.to_file()
+        files.append(file)
 
-        for attachment in attachments:
-            file = await attachment.to_file()
-            files.append(file)
+    embed = discord.Embed(
+        title=f"返信 #{reply_number} {anchor}",
+        description=content if content else "（画像）",
+        color=0x2F3136
+    )
 
-       embed = discord.Embed(
-    title=f"返信 #{reply_number} {anchor}",
-    description=content if content else "（画像）",
-    color=0x2F3136
-)
-
-await message.channel.send(embed=embed, files=files)
+    await message.channel.send(embed=embed, files=files)
 
     await bot.process_commands(message)
 
