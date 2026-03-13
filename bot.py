@@ -3,6 +3,7 @@ from discord.ext import commands
 import time
 import json
 import os
+import re
 
 TOKEN = os.getenv("TOKEN")
 
@@ -24,9 +25,8 @@ REPLY_FILE = "reply_data.json"
 
 def load_count():
     if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r") as f:
-            data = json.load(f)
-            return data.get("count", 0)
+        with open(DATA_FILE) as f:
+            return json.load(f).get("count", 0)
     return 0
 
 
@@ -37,9 +37,9 @@ def save_count(count):
 
 def load_reply():
     if os.path.exists(REPLY_FILE):
-        with open(REPLY_FILE, "r") as f:
+        with open(REPLY_FILE) as f:
             return json.load(f)
-    return {}
+    return {"reply": 0}
 
 
 def save_reply(data):
@@ -48,7 +48,7 @@ def save_reply(data):
 
 
 anon_count = load_count()
-reply_count = load_reply()
+reply_data = load_reply()
 
 
 class AnonModal(discord.ui.Modal, title="匿名投稿"):
@@ -81,27 +81,22 @@ class AnonModal(discord.ui.Modal, title="匿名投稿"):
         save_count(anon_count)
 
         channel = bot.get_channel(POST_CHANNEL_ID)
+        log_channel = bot.get_channel(LOG_CHANNEL_ID)
+
+        content = self.message.value if self.message.value else "（画像のみ投稿）"
 
         embed = discord.Embed(
             title=f"匿名 #{anon_count}",
-            description=self.message.value if self.message.value else "（画像のみ投稿）",
+            description=content,
             color=0x2F3136
         )
 
-        msg = await channel.send(embed=embed)
+        await channel.send(embed=embed)
 
-        thread = await msg.create_thread(
-            name=f"匿名 #{anon_count}",
-            auto_archive_duration=1440
-        )
-
-        reply_count[str(thread.id)] = 0
-        save_reply(reply_count)
-
-        log = bot.get_channel(LOG_CHANNEL_ID)
-        await log.send(
-            f"匿名 #{anon_count}\n投稿者: {interaction.user}\n内容: {self.message.value}"
-        )
+        if log_channel:
+            await log_channel.send(
+                f"匿名 #{anon_count}\n投稿者: {interaction.user}\n内容: {content}"
+            )
 
         await interaction.response.send_message(
             "投稿しました",
@@ -113,9 +108,14 @@ class AnonView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @discord.ui.button(label="匿名投稿する", style=discord.ButtonStyle.primary, custom_id="anon_post")
+    @discord.ui.button(
+        label="匿名投稿する",
+        style=discord.ButtonStyle.primary,
+        custom_id="anon_post"
+    )
     async def anon_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(AnonModal())
+
 
 @bot.command()
 async def setup(ctx):
@@ -126,12 +126,11 @@ async def setup(ctx):
         if msg.author == bot.user:
             await msg.delete()
 
-    view = AnonView()
-
     await channel.send(
         "匿名投稿\n下のボタンから投稿できます",
-        view=view
+        view=AnonView()
     )
+
 
 @bot.event
 async def on_message(message):
@@ -139,31 +138,38 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    if isinstance(message.channel, discord.Thread):
+    if message.channel.id == POST_CHANNEL_ID:
 
-        thread_id = str(message.channel.id)
+        if message.author.bot:
+            return
 
-        if thread_id in reply_count:
+        content = message.content
+        attachments = message.attachments
 
-            content = message.content
-            attachments = message.attachments
+        await message.delete()
 
-            await message.delete()
+        reply_data["reply"] += 1
+        save_reply(reply_data)
 
-            reply_count[thread_id] += 1
-            save_reply(reply_count)
+        reply_number = reply_data["reply"]
 
-            files = []
+        anchor = ""
+        match = re.search(r">>\d+", content)
 
-            for attachment in attachments:
-                file = await attachment.to_file()
-                files.append(file)
+        if match:
+            anchor = match.group()
 
-            text = f"""返信 #{reply_count[thread_id]}
+        files = []
+
+        for attachment in attachments:
+            file = await attachment.to_file()
+            files.append(file)
+
+        text = f"""返信 #{reply_number} {anchor}
 ----------------
 {content if content else ""}"""
 
-            await message.channel.send(text, files=files)
+        await message.channel.send(text, files=files)
 
     await bot.process_commands(message)
 
@@ -172,5 +178,6 @@ async def on_message(message):
 async def on_ready():
     bot.add_view(AnonView())
     print(f"ログイン成功: {bot.user}")
+
 
 bot.run(TOKEN)
