@@ -121,13 +121,16 @@ async def setup(ctx):
 
     channel = bot.get_channel(BUTTON_CHANNEL_ID)
 
+    async for msg in channel.history(limit=20):
+        if msg.author == bot.user:
+            await msg.delete()
+
     view = AnonView()
 
     await channel.send(
         "匿名投稿\n下のボタンから投稿できます",
         view=view
     )
-
 
 @bot.event
 async def on_message(message):
