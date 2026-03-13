@@ -24,10 +24,9 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 cooldowns = {}
 
-
-# -------------------------
-# JSONロード
-# -------------------------
+# -----------------------
+# JSON
+# -----------------------
 
 def load_json(file, default):
     if os.path.exists(file):
@@ -45,10 +44,9 @@ anon_data = load_json(DATA_FILE, {"count": 0})
 reply_data = load_json(REPLY_FILE, {"reply": 0})
 anon_links = load_json(LINK_FILE, {})
 
-
-# -------------------------
+# -----------------------
 # Modal
-# -------------------------
+# -----------------------
 
 class AnonModal(discord.ui.Modal, title="匿名投稿"):
 
@@ -84,7 +82,7 @@ class AnonModal(discord.ui.Modal, title="匿名投稿"):
         embed = discord.Embed(
             title=f"匿名 #{number}",
             description=text,
-            color=0x2F3136
+            color=0x5865F2
         )
 
         channel = bot.get_channel(POST_CHANNEL_ID)
@@ -99,12 +97,12 @@ class AnonModal(discord.ui.Modal, title="匿名投稿"):
 
         await interaction.response.send_message("投稿しました", ephemeral=True)
 
-
-# -------------------------
-# ボタン
-# -------------------------
+# -----------------------
+# Button
+# -----------------------
 
 class AnonView(discord.ui.View):
+
     def __init__(self):
         super().__init__(timeout=None)
 
@@ -116,10 +114,9 @@ class AnonView(discord.ui.View):
     async def post(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(AnonModal())
 
-
-# -------------------------
-# setupコマンド
-# -------------------------
+# -----------------------
+# Setup
+# -----------------------
 
 @bot.command()
 async def setup(ctx):
@@ -131,14 +128,13 @@ async def setup(ctx):
             await msg.delete()
 
     await channel.send(
-        "匿名投稿\nボタンか画像送信で投稿できます",
+        "匿名掲示板\nボタンか画像送信で投稿できます",
         view=AnonView()
     )
 
-
-# -------------------------
-# メッセージイベント
-# -------------------------
+# -----------------------
+# Message Event
+# -----------------------
 
 @bot.event
 async def on_message(message):
@@ -146,9 +142,9 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    # -------------------------
+    # -----------------------
     # 画像匿名投稿
-    # -------------------------
+    # -----------------------
 
     if message.channel.id == BUTTON_CHANNEL_ID:
 
@@ -172,8 +168,11 @@ async def on_message(message):
             embed = discord.Embed(
                 title=f"匿名 #{number}",
                 description=text,
-                color=0x2F3136
+                color=0x5865F2
             )
+
+            if message.attachments:
+                embed.set_image(url=message.attachments[0].url)
 
             channel = bot.get_channel(POST_CHANNEL_ID)
 
@@ -183,14 +182,15 @@ async def on_message(message):
             save_json(LINK_FILE, anon_links)
 
             log = bot.get_channel(LOG_CHANNEL_ID)
+
             if log:
                 await log.send(f"匿名 #{number}\n投稿者:{message.author}\n{text}")
 
             return
 
-    # -------------------------
+    # -----------------------
     # 返信
-    # -------------------------
+    # -----------------------
 
     if message.channel.id == POST_CHANNEL_ID:
 
@@ -212,7 +212,7 @@ async def on_message(message):
 
             if a in anon_links:
                 link = anon_links[a]
-                anchor_text += f"[>>{a}]({link}) "
+                anchor_text += f"🔗 [>>{a}]({link}) "
             else:
                 anchor_text += f">>{a} "
 
@@ -225,22 +225,20 @@ async def on_message(message):
         embed = discord.Embed(
             title=f"返信 #{rnum}",
             description=f"{anchor_text}\n{content}",
-            color=0x2F3136
+            color=0x2ecc71
         )
 
         await message.channel.send(embed=embed, files=files)
 
     await bot.process_commands(message)
 
-
-# -------------------------
-# 起動
-# -------------------------
+# -----------------------
+# Ready
+# -----------------------
 
 @bot.event
 async def on_ready():
     bot.add_view(AnonView())
     print("Bot起動")
-
 
 bot.run(TOKEN)
