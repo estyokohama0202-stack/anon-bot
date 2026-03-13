@@ -19,6 +19,7 @@ cooldowns = {}
 COOLDOWN_TIME = 30
 
 DATA_FILE = "anon_data.json"
+REPLY_FILE = "reply_data.json"
 
 
 def load_count():
@@ -34,7 +35,20 @@ def save_count(count):
         json.dump({"count": count}, f)
 
 
+def load_reply():
+    if os.path.exists(REPLY_FILE):
+        with open(REPLY_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+
+def save_reply(data):
+    with open(REPLY_FILE, "w") as f:
+        json.dump(data, f)
+
+
 anon_count = load_count()
+reply_count = load_reply()
 
 
 class AnonModal(discord.ui.Modal, title="匿名投稿"):
@@ -56,7 +70,7 @@ class AnonModal(discord.ui.Modal, title="匿名投稿"):
             remaining = COOLDOWN_TIME - (now - cooldowns[user_id])
             if remaining > 0:
                 await interaction.response.send_message(
-                    f"⏳ あと {int(remaining)} 秒待ってください。",
+                    f"あと {int(remaining)} 秒待ってください",
                     ephemeral=True
                 )
                 return
@@ -69,19 +83,20 @@ class AnonModal(discord.ui.Modal, title="匿名投稿"):
         channel = bot.get_channel(POST_CHANNEL_ID)
 
         embed = discord.Embed(
-            title=f"　匿名 #{anon_count}",
+            title=f"匿名 #{anon_count}",
             description=self.message.value if self.message.value else "（画像のみ投稿）",
             color=0x2F3136
         )
 
-        embed.set_footer(text="この投稿のスレッドで返信できます")
-
         msg = await channel.send(embed=embed)
 
-        await msg.create_thread(
-            name=f"　匿名 #{anon_count} のスレッド",
+        thread = await msg.create_thread(
+            name=f"匿名 #{anon_count}",
             auto_archive_duration=1440
         )
+
+        reply_count[str(thread.id)] = 0
+        save_reply(reply_count)
 
         log = bot.get_channel(LOG_CHANNEL_ID)
         await log.send(
@@ -89,7 +104,7 @@ class AnonModal(discord.ui.Modal, title="匿名投稿"):
         )
 
         await interaction.response.send_message(
-            "投稿しました！スレッドで返信できます。",
+            "投稿しました",
             ephemeral=True
         )
 
@@ -122,12 +137,17 @@ async def on_message(message):
 
     if isinstance(message.channel, discord.Thread):
 
-        if "　匿名 #" in message.channel.name:
+        thread_id = str(message.channel.id)
+
+        if thread_id in reply_count:
 
             content = message.content
             attachments = message.attachments
 
             await message.delete()
+
+            reply_count[thread_id] += 1
+            save_reply(reply_count)
 
             files = []
 
@@ -135,7 +155,7 @@ async def on_message(message):
                 file = await attachment.to_file()
                 files.append(file)
 
-            text = f"""匿名返信
+            text = f"""返信 #{reply_count[thread_id]}
 ----------------
 {content if content else ""}"""
 
