@@ -17,7 +17,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 cooldowns = {}
-COOLDOWN_TIME = 30
+COOLDOWN_TIME = 10
 
 DATA_FILE = "anon_data.json"
 REPLY_FILE = "reply_data.json"
@@ -165,11 +165,13 @@ async def on_message(message):
             file = await attachment.to_file()
             files.append(file)
 
-        text = f"""返信 #{reply_number} {anchor}
-----------------
-{content if content else ""}"""
+       embed = discord.Embed(
+    title=f"返信 #{reply_number} {anchor}",
+    description=content if content else "（画像）",
+    color=0x2F3136
+)
 
-        await message.channel.send(text, files=files)
+await message.channel.send(embed=embed, files=files)
 
     await bot.process_commands(message)
 
