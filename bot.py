@@ -109,7 +109,7 @@ async def setup(ctx):
     view = AnonView()
 
     await channel.send(
-        "🕶️ 匿名投稿\n下のボタンから投稿できます",
+        "匿名投稿\n下のボタンから投稿できます",
         view=view
     )
 
