@@ -110,11 +110,12 @@ class AnonModal(discord.ui.Modal, title="匿名投稿"):
 
 
 class AnonView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
 
-    @discord.ui.button(label="匿名投稿する", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="匿名投稿する", style=discord.ButtonStyle.primary, custom_id="anon_post")
     async def anon_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(AnonModal())
-
 
 @bot.command()
 async def setup(ctx):
