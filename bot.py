@@ -201,7 +201,7 @@ async def setup(ctx):
                 pass
 
     await channel.send(
-        "匿名掲示板\n画像を送ると匿名投稿されます",
+        "下記の匿名投稿から投稿できます。\nこちらのチャンネルに画像やGIF動画も送ると匿名投稿出来ます。\n返信は>>で出来ます。",
         view=PostView()
     )
 
