@@ -170,7 +170,7 @@ async def on_message(message):
 
 @bot.event
 async def on_ready():
+    bot.add_view(AnonView())
     print(f"ログイン成功: {bot.user}")
-
 
 bot.run(TOKEN)
