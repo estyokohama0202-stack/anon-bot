@@ -19,9 +19,7 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# ----------------
-# JSON
-# ----------------
+# ---------------- JSON ----------------
 
 def load_json(file, default):
     if os.path.exists(file):
@@ -36,16 +34,12 @@ def save_json(file, data):
 data = load_json(DATA_FILE, {"count": 0})
 links = load_json(LINK_FILE, {})
 
-# ----------------
-# 時間
-# ----------------
+# ---------------- 時間 ----------------
 
 def now():
     return datetime.now().strftime("%Y/%m/%d %H:%M:%S")
 
-# ----------------
-# 投票
-# ----------------
+# ---------------- 投票 ----------------
 
 class VoteView(discord.ui.View):
 
@@ -81,9 +75,7 @@ class VoteView(discord.ui.View):
 
         await interaction.response.edit_message(view=self)
 
-# ----------------
-# 引用
-# ----------------
+# ---------------- 引用処理 ----------------
 
 async def build_preview(channel, text):
 
@@ -98,9 +90,7 @@ async def build_preview(channel, text):
             link = links[a]
 
             try:
-
                 msg_id = int(link.split("/")[-1])
-
                 m = await channel.fetch_message(msg_id)
 
                 quoted = "\n".join(m.content.split("\n")[2:])[:120]
@@ -114,9 +104,7 @@ async def build_preview(channel, text):
 
     return preview + text
 
-# ----------------
-# 投稿
-# ----------------
+# ---------------- 投稿処理 ----------------
 
 async def post(channel, user, text, image=None):
 
@@ -141,7 +129,6 @@ async def post(channel, user, text, image=None):
     links[str(num)] = msg.jump_url
     save_json(LINK_FILE, links)
 
-    # ログ
     log = bot.get_channel(LOG_CHANNEL_ID)
 
     if log:
@@ -149,9 +136,7 @@ async def post(channel, user, text, image=None):
             f"匿名投稿ログ\n番号:{num}\nユーザー:{user}\n内容:{text}"
         )
 
-# ----------------
-# Modal
-# ----------------
+# ---------------- 投稿Modal ----------------
 
 class PostModal(discord.ui.Modal, title="匿名投稿"):
 
@@ -171,9 +156,7 @@ class PostModal(discord.ui.Modal, title="匿名投稿"):
             "投稿しました", ephemeral=True
         )
 
-# ----------------
-# Button
-# ----------------
+# ---------------- 投稿ボタン ----------------
 
 class PostView(discord.ui.View):
 
@@ -182,33 +165,33 @@ class PostView(discord.ui.View):
 
     @discord.ui.button(
         label="匿名投稿",
-        style=discord.ButtonStyle.primary
+        style=discord.ButtonStyle.primary,
+        custom_id="anon_post_button"
     )
     async def post_button(self, interaction, button):
 
         await interaction.response.send_modal(PostModal())
 
-# ----------------
-# setup
-# ----------------
+# ---------------- setup ----------------
 
 @bot.command()
 async def setup(ctx):
 
     channel = bot.get_channel(BUTTON_CHANNEL_ID)
 
-    async for m in channel.history(limit=10):
+    async for m in channel.history(limit=20):
         if m.author == bot.user:
-            await m.delete()
+            try:
+                await m.delete()
+            except:
+                pass
 
     await channel.send(
-        "匿名掲示板\nボタンから投稿できます",
+        "匿名掲示板\n下のボタンから投稿できます",
         view=PostView()
     )
 
-# ----------------
-# メッセージ
-# ----------------
+# ---------------- 投稿監視 ----------------
 
 @bot.event
 async def on_message(message):
@@ -225,13 +208,16 @@ async def on_message(message):
         if message.attachments:
             image = message.attachments[0].url
 
-        await message.delete()
+        try:
+            await message.delete()
+        except:
+            pass
 
         await post(message.channel, message.author, text, image)
 
     await bot.process_commands(message)
 
-# ----------------
+# ---------------- 起動 ----------------
 
 @bot.event
 async def on_ready():
