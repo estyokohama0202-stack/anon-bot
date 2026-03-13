@@ -79,7 +79,7 @@ class AnonModal(discord.ui.Modal, title="匿名投稿"):
         msg = await channel.send(embed=embed)
 
         await msg.create_thread(
-            name=f"匿名 #{anon_count} のスレッド",
+            name=f"　匿名 #{anon_count} のスレッド",
             auto_archive_duration=1440
         )
 
@@ -122,7 +122,7 @@ async def on_message(message):
 
     if isinstance(message.channel, discord.Thread):
 
-        if "匿名 #" in message.channel.name:
+        if "　匿名 #" in message.channel.name:
 
             content = message.content
             attachments = message.attachments
