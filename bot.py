@@ -50,44 +50,43 @@ class VoteView(discord.ui.View):
 
     def __init__(self):
         super().__init__(timeout=None)
-        self.up=0
-        self.down=0
-        self.voters=set()
+        self.up = 0
+        self.down = 0
+        self.voters = set()
 
     @discord.ui.button(label="👍 0", style=discord.ButtonStyle.success)
-    async def up(self, interaction:discord.Interaction, button):
+    async def upvote(self, interaction: discord.Interaction, button):
 
         if interaction.user.id in self.voters:
-            await interaction.response.send_message("投票済み",ephemeral=True)
+            await interaction.response.send_message("投票済み", ephemeral=True)
             return
 
         self.voters.add(interaction.user.id)
-        self.up+=1
-        button.label=f"👍 {self.up}"
+        self.up += 1
+        button.label = f"👍 {self.up}"
 
         await interaction.response.edit_message(view=self)
 
     @discord.ui.button(label="👎 0", style=discord.ButtonStyle.danger)
-    async def down(self, interaction:discord.Interaction, button):
+    async def downvote(self, interaction: discord.Interaction, button):
 
         if interaction.user.id in self.voters:
-            await interaction.response.send_message("投票済み",ephemeral=True)
+            await interaction.response.send_message("投票済み", ephemeral=True)
             return
 
         self.voters.add(interaction.user.id)
-        self.down+=1
-        button.label=f"👎 {self.down}"
+        self.down += 1
+        button.label = f"👎 {self.down}"
 
         await interaction.response.edit_message(view=self)
 
-# ---------- 引用 ----------
+# ---------- 引用 + ジャンプ ----------
 
-async def build_quote(channel,text):
+async def build_quote(channel, text):
 
-    anchors=re.findall(r">>(\d+)",text)
+    anchors = re.findall(r">>(\d+)", text)
 
-    quote_text=""
-    quote_embed=None
+    quote_embed = None
 
     for a in anchors:
 
@@ -95,41 +94,44 @@ async def build_quote(channel,text):
 
             try:
 
-                link=links[a]
-                msg_id=int(link.split("/")[-1])
+                link = links[a]
+                msg_id = int(link.split("/")[-1])
 
-                m=await channel.fetch_message(msg_id)
+                m = await channel.fetch_message(msg_id)
 
-                quoted="\n".join(m.content.split("\n")[1:])[:120]
+                if m.embeds:
+                    quoted = m.embeds[0].description
+                else:
+                    quoted = m.content
 
-                quote_text+=f">>{a}\n{quoted}\n\n"
-
-                quote_embed=discord.Embed(
+                quote_embed = discord.Embed(
                     description=f">>{a}\n{quoted}",
                     color=0xf1c40f
                 )
 
-                text=text.replace(f">>{a}",f"[>>{a}]({link})")
+                text = text.replace(
+                    f">>{a}",
+                    f"[>>{a}]({link})"
+                )
 
             except:
                 pass
 
-    return text,quote_embed
+    return text, quote_embed
 
 # ---------- 投稿 ----------
 
-async def post(channel,user,text,image=None,is_reply=False,quote_embed=None):
+async def post(channel, user, text, images=None, is_reply=False, quote_embed=None):
 
-    data["count"]+=1
-    save_json(DATA_FILE,data)
+    data["count"] += 1
+    save_json(DATA_FILE, data)
 
-    num=data["count"]
+    num = data["count"]
 
-    title="返信" if is_reply else "匿名"
+    title = "返信" if is_reply else "匿名"
+    color = 0x2ecc71 if is_reply else 0x5865F2
 
-    color=0x2ecc71 if is_reply else 0x5865F2
-
-    embed=discord.Embed(
+    embed = discord.Embed(
         title=f"{title} #{num}",
         description=text,
         color=color
@@ -137,45 +139,56 @@ async def post(channel,user,text,image=None,is_reply=False,quote_embed=None):
 
     embed.set_footer(text=now())
 
-    if image:
-        embed.set_image(url=image)
+    if images:
 
-    msg=await channel.send(
-        embed=embed,
-        view=VoteView()
-    )
+        if isinstance(images, list):
+
+            embed.set_image(url=images[0])
+
+            for img in images[1:]:
+
+                embed.add_field(
+                    name="画像",
+                    value=img,
+                    inline=False
+                )
+
+        else:
+            embed.set_image(url=images)
+
+    msg = await channel.send(embed=embed, view=VoteView())
 
     if quote_embed:
         await channel.send(embed=quote_embed)
 
-    links[str(num)]=msg.jump_url
-    save_json(LINK_FILE,links)
+    links[str(num)] = msg.jump_url
+    save_json(LINK_FILE, links)
 
-    log=bot.get_channel(LOG_CHANNEL_ID)
+    log = bot.get_channel(LOG_CHANNEL_ID)
 
     if log:
         await log.send(
-            f"匿名投稿\n番号:{num}\nユーザー:{user}\n内容:{text}"
+            f"匿名投稿ログ\n番号:{num}\nユーザー:{user}\n内容:{text}"
         )
 
 # ---------- Modal ----------
 
-class PostModal(discord.ui.Modal,title="匿名投稿"):
+class PostModal(discord.ui.Modal, title="匿名投稿"):
 
-    text=discord.ui.TextInput(
+    text = discord.ui.TextInput(
         label="投稿内容",
         style=discord.TextStyle.paragraph,
         required=False
     )
 
-    async def on_submit(self,interaction:discord.Interaction):
+    async def on_submit(self, interaction: discord.Interaction):
 
-        channel=bot.get_channel(POST_CHANNEL_ID)
+        channel = bot.get_channel(POST_CHANNEL_ID)
 
-        await post(channel,interaction.user,self.text.value)
+        await post(channel, interaction.user, self.text.value)
 
         await interaction.response.send_message(
-            "投稿しました",ephemeral=True
+            "投稿しました", ephemeral=True
         )
 
 # ---------- ボタン ----------
@@ -190,7 +203,7 @@ class PostView(discord.ui.View):
         style=discord.ButtonStyle.primary,
         custom_id="anon_post_button"
     )
-    async def post_button(self,interaction,button):
+    async def post_button(self, interaction, button):
 
         await interaction.response.send_modal(PostModal())
 
@@ -199,10 +212,10 @@ class PostView(discord.ui.View):
 @bot.command()
 async def setup(ctx):
 
-    channel=bot.get_channel(BUTTON_CHANNEL_ID)
+    channel = bot.get_channel(BUTTON_CHANNEL_ID)
 
     async for m in channel.history(limit=20):
-        if m.author==bot.user:
+        if m.author == bot.user:
             try:
                 await m.delete()
             except:
@@ -213,7 +226,7 @@ async def setup(ctx):
         view=PostView()
     )
 
-# ---------- メッセージ ----------
+# ---------- メッセージ処理 ----------
 
 @bot.event
 async def on_message(message):
@@ -222,38 +235,38 @@ async def on_message(message):
         return
 
     # 画像匿名投稿
-    if message.channel.id==BUTTON_CHANNEL_ID:
+    if message.channel.id == BUTTON_CHANNEL_ID:
 
         if message.attachments:
+
+            images = [a.url for a in message.attachments]
 
             try:
                 await message.delete()
             except:
                 pass
 
-            image=message.attachments[0].url
-
             await post(
                 bot.get_channel(POST_CHANNEL_ID),
                 message.author,
                 "（画像投稿）",
-                image
+                images
             )
 
             return
 
-    # 掲示板返信
-    if message.channel.id==POST_CHANNEL_ID:
+    # 返信
+    if message.channel.id == POST_CHANNEL_ID:
 
-        text,quote_embed=await build_quote(
+        text, quote_embed = await build_quote(
             message.channel,
             message.content
         )
 
-        image=None
+        images = None
 
         if message.attachments:
-            image=message.attachments[0].url
+            images = [a.url for a in message.attachments]
 
         try:
             await message.delete()
@@ -264,7 +277,7 @@ async def on_message(message):
             message.channel,
             message.author,
             text,
-            image,
+            images,
             True,
             quote_embed
         )
