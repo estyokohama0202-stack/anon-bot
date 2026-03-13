@@ -69,7 +69,7 @@ class AnonModal(discord.ui.Modal, title="匿名投稿"):
         channel = bot.get_channel(POST_CHANNEL_ID)
 
         embed = discord.Embed(
-            title=f"匿名 #{anon_count}",
+            title=f"　匿名 #{anon_count}",
             description=self.message.value if self.message.value else "（画像のみ投稿）",
             color=0x2F3136
         )
