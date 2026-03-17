@@ -39,7 +39,6 @@ return users
 ```
 
 def send_discord(user, action):
-# タイトルカスタム
 if action == "New Follow":
 title = "🎉 DJSHIGEが新しくフォローしました"
 elif action == "Unfollow":
@@ -81,5 +80,43 @@ print("Sending initial 10 follows...")
 ```
 latest_users = list(users.values())[:10]
 
-fo
+for user in latest_users:
+    send_discord(user, "Initial")
 ```
+
+def main():
+print("🚀 Starting bot...")
+
+```
+current = get_following()
+
+if current:
+    send_initial(current)
+
+previous = current
+
+while True:
+    time.sleep(CHECK_INTERVAL)
+
+    current = get_following()
+
+    if not current:
+        print("⚠️ データ取得失敗")
+        continue
+
+    # 新規フォロー
+    new = set(current) - set(previous)
+    for uid in new:
+        send_discord(current[uid], "New Follow")
+
+    # フォロー解除
+    gone = set(previous) - set(current)
+    for uid in gone:
+        send_discord(previous[uid], "Unfollow")
+
+    previous = current
+    print("✅ Checked...")
+```
+
+if **name** == "**main**":
+main()
