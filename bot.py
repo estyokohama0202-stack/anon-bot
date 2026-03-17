@@ -20,24 +20,22 @@ params = {
 }
 
 ```
-try:
-    res = requests.get(url, headers=headers, params=params)
-    if res.status_code != 200:
-        print("API Error:", res.text)
-        return {}
+res = requests.get(url, headers=headers, params=params)
 
-    data = res.json()
+print("STATUS:", res.status_code)
+print("RESPONSE:", res.text)
 
-    users = {}
-    if "data" in data:
-        for user in data["data"]:
-            users[user["id"]] = user
-
-    return users
-
-except Exception as e:
-    print("Error:", e)
+if res.status_code != 200:
     return {}
+
+data = res.json()
+
+users = {}
+if "data" in data:
+    for user in data["data"]:
+        users[user["id"]] = user
+
+return users
 ```
 
 def send_discord(user, action):
